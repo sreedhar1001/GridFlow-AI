@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GridFlow AI — Stateful Cyclic Multi-Agent Orchestrator</title>
+  <style>
+    :root {
+      --bg-primary: #070b14;
+      --bg-card: #0e1526;
+      --bg-card-alt: #131c33;
+      --border: #1f2d4d;
+      --text-main: #e8f0fe;
+      --text-muted: #8da2c0;
+      --accent-cyan: #00e5ff;
+      --accent-blue: #3b82f6;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-purple: #a855f7;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: radial-gradient(circle at 15% 15%, #0f1b35 0%, var(--bg-primary) 60%);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 24px;
+      background: rgba(14, 21, 38, 0.92);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #050912;
+      font-family: var(--font-mono);
+      font-size: 16px;
+      box-shadow: 0 0 18px rgba(0, 229, 255, 0.35);
+    }
+
+    .brand-title h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-title p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .status-pills {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 5px 11px;
+      border-radius: 999px;
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+    }
+
+    .container {
+      max-width: 1560px;
+      margin: 0 auto;
+      padding: 20px 24px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Navigation Tabs */
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    .tab-btn {
+      background: var(--bg-card);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      padding: 9px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn.active, .tab-btn:hover {
+      color: var(--text-main);
+      border-color: var(--accent-cyan);
+      background: rgba(0, 229, 255, 0.1);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Grid Layouts */
+    .top-grid {
+      display: grid;
+      grid-template-columns: 440px 1fr;
+      gap: 20px;
+    }
+
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 1180px) {
+      .top-grid, .bottom-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.32);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 10px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    textarea, input, select {
+      width: 100%;
+      background: #080d1a;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+    }
+
+    textarea:focus, input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+    }
+
+    .preset-row {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .preset-btn {
+      text-align: left;
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.15s;
+    }
+
+    .preset-btn:hover {
+      border-color: var(--accent-cyan);
+      background: rgba(0, 229, 255, 0.08);
+    }
+
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-weight: 700;
+    }
+
+    .badge-green { background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .badge-amber { background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .badge-red   { background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .badge-cyan  { background: rgba(0, 229, 255, 0.15); color: #22d3ee; border: 1px solid rgba(0, 229, 255, 0.4); }
+    .badge-purple{ background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      color: #040811;
+      font-weight: 700;
+      border: none;
+      padding: 11px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: transform 0.1s, box-shadow 0.15s;
+      box-shadow: 0 4px 16px rgba(0, 229, 255, 0.25);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 22px rgba(0, 229, 255, 0.4);
+    }
+
+    /* Topology Graph Nodes */
+    .topology-stage {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 12px;
+      background: #080d19;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .nodes-flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 900px) {
+      .nodes-flow {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .agent-node {
+      background: var(--bg-card-alt);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      transition: all 0.25s ease;
+    }
+
+    .agent-node.active {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 22px rgba(0, 229, 255, 0.35);
+      transform: translateY(-2px);
+    }
+
+    .agent-node.completed {
+      border-color: var(--accent-green);
+    }
+
+    .agent-node.revision {
+      border-color: var(--accent-amber);
+      box-shadow: 0 0 18px rgba(245, 158, 11, 0.3);
+    }
+
+    .agent-node.failed {
+      border-color: var(--accent-red);
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.35);
+    }
+
+    .node-title {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .node-role {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .node-tools {
+      margin-top: auto;
+      padding-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .tool-chip {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      padding: 2px 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      color: var(--accent-cyan);
+    }
+
+    /* Timeline Steps */
+    .timeline-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 360px;
+      overflow-y: auto;
+    }
+
+    .timeline-item {
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .timeline-item:hover, .timeline-item.selected {
+      border-color: var(--accent-cyan);
+      background: rgba(0, 229, 255, 0.08);
+    }
+
+    .timeline-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .timeline-trace {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    pre.code-box {
+      background: #050811;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #c9d9f0;
+      overflow-x: auto;
+      max-height: 380px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    table.data-table th, table.data-table td {
+      border-bottom: 1px solid var(--border);
+      padding: 8px 10px;
+      text-align: left;
+    }
+
+    table.data-table th {
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">GF</div>
+      <div class="brand-title">
+        <h1>GridFlow AI <span class="badge badge-cyan">v1.0 ORCHESTRATOR</span></h1>
+        <p>Stateful Cyclic Multi-Agent Execution Grid • 3-Tier Memory • ChromaDB RAG • AST Circuit Breaker</p>
+      </div>
+    </div>
+    <div class="status-pills">
+      <div class="pill"><span class="dot"></span> Core Grid: ONLINE</div>
+      <div class="pill" id="pill-kb">ChromaDB: 6 docs (cosine ≥ 0.72)</div>
+      <div class="pill" id="pill-sessions">SQLite Checkpoints: 1 thread</div>
+      <div class="pill">Max Retries: 3 (Circuit Breaker)</div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('orchestrator', this)">1. Live Cyclic Orchestrator & DAG</button>
+      <button class="tab-btn" onclick="switchTab('skills', this)">2. Skill Registry & RBAC Security Bench (skill.md)</button>
+      <button class="tab-btn" onclick="switchTab('memory', this)">3. 3-Tier Memory & ChromaDB Explorer (memory.md)</button>
+    </div>
+
+    <!-- TAB 1: ORCHESTRATOR -->
+    <div id="tab-orchestrator" class="tab-panel active">
+      <div class="top-grid">
+        <!-- Left Control Panel -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Mission Prompt & Execution Mode</div>
+            <span class="badge badge-purple">Deterministic Routing</span>
+          </div>
+
+          <div class="preset-row">
+            <label>Hackathon Live Demo Scenarios (1-Click Presets):</label>
+            <button class="preset-btn" onclick="selectPreset('standard')">
+              <span><strong>Scenario A:</strong> Token Bucket Rate Limiter Service</span>
+              <span class="badge badge-green">STANDARD PASS</span>
+            </button>
+            <button class="preset-btn" onclick="selectPreset('self_heal')">
+              <span><strong>Scenario B:</strong> Smart Grid Telemetry Anomaly Detector</span>
+              <span class="badge badge-amber">SELF-HEALING RETRY</span>
+            </button>
+            <button class="preset-btn" onclick="selectPreset('circuit_breaker')">
+              <span><strong>Scenario C:</strong> Persistent Security Violation Stress Test</span>
+              <span class="badge badge-red">CIRCUIT BREAKER (3x)</span>
+            </button>
+          </div>
+
+          <div>
+            <label for="userQuery">User Prompt (`GridState.user_query`):</label>
+            <textarea id="userQuery" rows="3">Build a thread-safe Token Bucket Rate Limiter API service in Python</textarea>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              <label for="execMode">Execution Mode:</label>
+              <select id="execMode">
+                <option value="standard">standard (Zero-Error Pass)</option>
+                <option value="self_heal">self_heal (1x Reject -> Auto-Fix)</option>
+                <option value="circuit_breaker">circuit_breaker (3x Reject -> Fallback)</option>
+              </select>
+            </div>
+            <div>
+              <label for="sessionId">Session / Thread ID (Optional):</label>
+              <input id="sessionId" type="text" placeholder="Auto-generated UUID" />
+            </div>
+          </div>
+
+          <button class="btn-primary" id="runBtn" onclick="executeWorkflow()">
+            ▶ Launch Cyclic Multi-Agent Execution
+          </button>
+        </div>
+
+        <!-- Right Topology & DAG Panel -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Live Execution Topology & Circuit Breaker Status</div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span class="badge badge-cyan" id="iterBadge">iteration_count: 0 / 3</span>
+              <span class="badge badge-green" id="workflowStatusBadge">READY</span>
+            </div>
+          </div>
+
+          <div class="topology-stage">
+            <div class="nodes-flow">
+              <div class="agent-node" id="node-Planner_Node">
+                <span class="badge badge-cyan" id="status-Planner_Node">IDLE</span>
+                <div class="node-title">1. Planner_Node</div>
+                <div class="node-role">Decomposes prompt into topological SubTask DAG.</div>
+                <div class="node-tools">
+                  <span class="tool-chip">DAG Builder</span>
+                </div>
+              </div>
+
+              <div class="agent-node" id="node-Researcher_Node">
+                <span class="badge badge-cyan" id="status-Researcher_Node">IDLE</span>
+                <div class="node-title">2. Researcher_Node</div>
+                <div class="node-role">Queries ChromaDB (cosine ≥ 0.72) & live docs. Zero hallucinated citations.</div>
+                <div class="node-tools">
+                  <span class="tool-chip">chromadb_semantic_search</span>
+                  <span class="tool-chip">web_scraper_extracter</span>
+                </div>
+              </div>
+
+              <div class="agent-node" id="node-Executor_Node">
+                <span class="badge badge-cyan" id="status-Executor_Node">IDLE</span>
+                <div class="node-title">3. Executor_Node</div>
+                <div class="node-role">Synthesizes production code & writes to sandboxed ./workspace/outputs/.</div>
+                <div class="node-tools">
+                  <span class="tool-chip">python_ast_validator</span>
+                  <span class="tool-chip">artifact_file_writer</span>
+                </div>
+              </div>
+
+              <div class="agent-node" id="node-Reviewer_Node">
+                <span class="badge badge-cyan" id="status-Reviewer_Node">IDLE</span>
+                <div class="node-title">4. Reviewer_Node</div>
+                <div class="node-role">Circuit Breaker: Validates AST syntax, banned imports, & citations (max 3x).</div>
+                <div class="node-tools">
+                  <span class="tool-chip">python_ast_validator</span>
+                </div>
+              </div>
+
+              <div class="agent-node" id="node-Fallback_Handler">
+                <span class="badge badge-cyan" id="status-Fallback_Handler">STANDBY</span>
+                <div class="node-title">5. Fallback_Handler</div>
+                <div class="node-role">Activates if iteration_count == 3; preserves partial artifacts & audit log.</div>
+                <div class="node-tools">
+                  <span class="tool-chip">Circuit Breaker Sink</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- SubTask DAG Table -->
+            <div>
+              <label>Decomposed SubTask DAG (`GridState.plan`):</label>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Task ID</th>
+                    <th>Assigned Node</th>
+                    <th>Dependencies</th>
+                    <th>Status</th>
+                    <th>Description / Output Summary</th>
+                  </tr>
+                </thead>
+                <tbody id="dagTableBody">
+                  <tr><td colspan="5" style="color:var(--text-muted);">Run a workflow to inspect decomposed DAG sub-tasks.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Inspection Panels -->
+      <div class="bottom-grid">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Node Transition Audit Trail (Click Any Step)</div>
+            <span class="badge badge-cyan" id="stepCountBadge">0 Steps</span>
+          </div>
+          <div class="timeline-list" id="timelineList"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Mandatory JSON Transition Payload (Section 4 Spec)</div>
+            <span class="badge badge-green">Schema Verified</span>
+          </div>
+          <pre class="code-box" id="transitionJsonViewer">Select any execution step on the left to inspect its strict JSON state transition payload.</pre>
+        </div>
+      </div>
+
+      <div class="bottom-grid">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Retrieved ChromaDB RAG Context (Cosine Similarity ≥ 0.72)</div>
+            <span class="badge badge-purple" id="ragCountBadge">0 Chunks</span>
+          </div>
+          <pre class="code-box" id="ragViewer">No RAG chunks retrieved yet.</pre>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Generated & AST-Verified Code Artifact (`./workspace/outputs/`)</div>
+            <span class="badge badge-green" id="artifactNameBadge">artifact</span>
+          </div>
+          <pre class="code-box" id="artifactCodeViewer">Run a workflow to view generated code artifacts.</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: SKILLS & RBAC SECURITY BENCH -->
+    <div id="tab-skills" class="tab-panel">
+      <div class="bottom-grid">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Role-Based Access Control (RBAC) & Tool Invoker</div>
+            <span class="badge badge-amber">skill.md Section 1 & 2</span>
+          </div>
+          <p style="font-size:12px; color:var(--text-muted);">
+            Test strict RBAC enforcement and Pydantic v2 input validation. Try invoking <code>artifact_file_writer</code> as <code>Researcher_Node</code> to trigger a live <code>RBAC_VIOLATION</code>!
+          </p>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              <label>Calling Node (`node_name`):</label>
+              <select id="rbacNode">
+                <option value="Researcher_Node">Researcher_Node</option>
+                <option value="Executor_Node">Executor_Node</option>
+                <option value="Reviewer_Node">Reviewer_Node</option>
+                <option value="Planner_Node">Planner_Node (No Direct Tools)</option>
+              </select>
+            </div>
+            <div>
+              <label>Target Skill (`tool_name`):</label>
+              <select id="rbacTool" onchange="populateSampleToolArgs()">
+                <option value="chromadb_semantic_search">chromadb_semantic_search</option>
+                <option value="python_ast_validator">python_ast_validator</option>
+                <option value="artifact_file_writer">artifact_file_writer</option>
+                <option value="web_scraper_extracter">web_scraper_extracter</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label>Tool Arguments JSON (`kwargs`):</label>
+            <textarea id="rbacKwargs" rows="4">{"query": "GridFlow cyclic topology Planner Researcher", "top_k": 3}</textarea>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn-primary" onclick="runRbacTest()">Invoke Tool with RBAC Check</button>
+            <button class="preset-btn" onclick="loadRbacViolationDemo()">⚡ Demo 1: Trigger RBAC Violation</button>
+            <button class="preset-btn" onclick="loadAstSecurityDemo()">⚡ Demo 2: Trigger AST Security Flag (`import subprocess`)</button>
+            <button class="preset-btn" onclick="loadPathTraversalDemo()">⚡ Demo 3: Trigger Sandbox Path Traversal Block (`../`)</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Live Tool Execution Result</div>
+            <span class="badge badge-cyan" id="toolResultBadge">READY</span>
+          </div>
+          <pre class="code-box" id="toolResultViewer">Invoke a tool on the left to inspect its structured output.</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: 3-TIER MEMORY & CHROMADB EXPLORER -->
+    <div id="tab-memory" class="tab-panel">
+      <div class="bottom-grid">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Tier 2 — Episodic Session Persistence (SQLite Checkpoints)</div>
+            <span class="badge badge-cyan">./workspace/checkpoints.sqlite</span>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Thread ID (`session_id`)</th>
+                <th>Checkpoints</th>
+                <th>Last Updated (UTC)</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="sessionsTableBody"></tbody>
+          </table>
+          <pre class="code-box" id="sessionHistoryViewer">Click "Inspect Checkpoints" on any session above to replay its full Tier-2 state snapshots.</pre>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Tier 3 — ChromaDB Semantic Knowledge Base (`gridflow_core_knowledge`)</div>
+            <span class="badge badge-purple">./chroma_db_store</span>
+          </div>
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
+            <input id="newDocId" placeholder="Doc ID (e.g. DOC-CUSTOM-01)" value="DOC-CUSTOM-01" />
+            <select id="newDocType">
+              <option value="architecture_spec">architecture_spec</option>
+              <option value="api_reference">api_reference</option>
+              <option value="code_template">code_template</option>
+              <option value="user_upload">user_upload</option>
+            </select>
+            <input id="newDocTitle" placeholder="Document Title" value="Custom Microgrid Specification" />
+          </div>
+          <textarea id="newDocContent" rows="2" placeholder="Enter verified technical context to index in ChromaDB...">Microgrid Controller Specification: Uses token bucket rate limiting and z-score telemetry anomaly detection for deterministic sub-second failover.</textarea>
+          <button class="btn-primary" onclick="upsertKnowledgeDoc()">+ Index Document into ChromaDB (`gridflow_core_knowledge`)</button>
+          <pre class="code-box" id="kbDocsViewer">Loading ChromaDB documents...</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentWorkflowData = null;
+
+    function switchTab(tabName, btn) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + tabName).classList.add('active');
+      btn.classList.add('active');
+      if (tabName === 'memory') {
+        refreshSystemStatus();
+      }
+    }
+
+    function selectPreset(mode) {
+      const qInput = document.getElementById('userQuery');
+      const modeSelect = document.getElementById('execMode');
+      modeSelect.value = mode;
+      if (mode === 'standard') {
+        qInput.value = 'Build a thread-safe Token Bucket Rate Limiter API service in Python';
+      } else if (mode === 'self_heal') {
+        qInput.value = 'Build a Smart Grid Substation Telemetry Anomaly Detector in Python';
+      } else if (mode === 'circuit_breaker') {
+        qInput.value = 'Stress test Reviewer_Node Circuit Breaker max_iterations=3 and Fallback_Handler recovery';
+      }
+      executeWorkflow();
+    }
+
+    function resetTopologyNodes() {
+      const nodes = ['Planner_Node', 'Researcher_Node', 'Executor_Node', 'Reviewer_Node', 'Fallback_Handler'];
+      nodes.forEach(n => {
+        const el = document.getElementById('node-' + n);
+        const st = document.getElementById('status-' + n);
+        if (el) el.className = 'agent-node';
+        if (st) {
+          st.className = 'badge badge-cyan';
+          st.textContent = n === 'Fallback_Handler' ? 'STANDBY' : 'IDLE';
+        }
+      });
+    }
+
+    async function executeWorkflow() {
+      const btn = document.getElementById('runBtn');
+      btn.textContent = '⏳ Running Cyclic StateGraph...';
+      btn.disabled = true;
+      resetTopologyNodes();
+
+      const payload = {
+        user_query: document.getElementById('userQuery').value,
+        mode: document.getElementById('execMode').value,
+        session_id: document.getElementById('sessionId').value.trim() || null,
+        max_iterations: 3
+      };
+
+      try {
+        const res = await fetch('/api/run?endpoint=run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        currentWorkflowData = data;
+        await animateExecution(data);
+        await refreshSystemStatus();
+      } catch (err) {
+        alert('Execution error: ' + err);
+      } finally {
+        btn.textContent = '▶ Launch Cyclic Multi-Agent Execution';
+        btn.disabled = false;
+      }
+    }
+
+    async function animateExecution(data) {
+      const transitions = data.transitions || [];
+      const finalState = data.final_state || {};
+      const logs = finalState.execution_logs || [];
+
+      document.getElementById('stepCountBadge').textContent = transitions.length + ' Steps';
+      const timelineEl = document.getElementById('timelineList');
+      timelineEl.innerHTML = '';
+
+      // Animate step by step
+      for (let i = 0; i < transitions.length; i++) {
+        const t = transitions[i];
+        const log = logs[i] || {};
+        const nodeName = log.node_name || t.current_node;
+        const nodeEl = document.getElementById('node-' + nodeName);
+        const badgeEl = document.getElementById('status-' + nodeName);
+
+        if (nodeEl) {
+          nodeEl.classList.add('active');
+          if (t.status === 'COMPLETED') {
+            nodeEl.className = 'agent-node completed active';
+            badgeEl.className = 'badge badge-green';
+          } else if (t.status === 'NEEDS_REVISION') {
+            nodeEl.className = 'agent-node revision active';
+            badgeEl.className = 'badge badge-amber';
+          } else if (t.status === 'FAILED') {
+            nodeEl.className = 'agent-node failed active';
+            badgeEl.className = 'badge badge-red';
+          } else {
+            badgeEl.className = 'badge badge-cyan';
+          }
+          badgeEl.textContent = t.status;
+        }
+
+        document.getElementById('iterBadge').textContent = `iteration_count: ${t.iteration_count} / 3`;
+
+        const item = document.createElement('div');
+        item.className = 'timeline-item' + (i === transitions.length - 1 ? ' selected' : '');
+        const badgeClass = t.status === 'COMPLETED' ? 'badge-green' : (t.status === 'NEEDS_REVISION' ? 'badge-amber' : (t.status === 'FAILED' ? 'badge-red' : 'badge-cyan'));
+        item.innerHTML = `
+          <div class="timeline-top">
+            <span><strong>Step #${i + 1}</strong> • ${nodeName} → <code>${t.next_node}</code></span>
+            <span class="badge ${badgeClass}">${t.status} (iter=${t.iteration_count})</span>
+          </div>
+          <div class="timeline-trace">${t.reasoning_trace}</div>
+        `;
+        item.onclick = () => selectTimelineStep(i, item);
+        timelineEl.appendChild(item);
+        selectTimelineStep(i, item);
+
+        await new Promise(r => setTimeout(r, 220));
+        if (nodeEl) nodeEl.classList.remove('active');
+      }
+
+      // Render DAG table
+      const dagBody = document.getElementById('dagTableBody');
+      dagBody.innerHTML = '';
+      (finalState.plan || []).forEach(st => {
+        const bClass = st.status === 'COMPLETED' ? 'badge-green' : (st.status === 'FAILED' ? 'badge-red' : 'badge-amber');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><code>${st.task_id}</code></td>
+          <td><code>${st.assigned_node}</code></td>
+          <td><code>${(st.dependencies || []).join(', ') || 'None'}</code></td>
+          <td><span class="badge ${bClass}">${st.status}</span></td>
+          <td>${st.output_summary || st.description}</td>
+        `;
+        dagBody.appendChild(tr);
+      });
+
+      // Render Retrieved RAG Context
+      const ragChunks = finalState.retrieved_context || [];
+      document.getElementById('ragCountBadge').textContent = ragChunks.length + ' Verified Chunks';
+      document.getElementById('ragViewer').textContent = JSON.stringify(ragChunks, null, 2);
+
+      // Render Generated Artifact
+      const artifacts = finalState.artifacts || {};
+      const pyFile = Object.keys(artifacts).find(k => k.endsWith('.py')) || Object.keys(artifacts)[0];
+      if (pyFile) {
+        document.getElementById('artifactNameBadge').textContent = './workspace/outputs/' + pyFile;
+        document.getElementById('artifactCodeViewer').textContent = artifacts[pyFile];
+      }
+
+      const wfBadge = document.getElementById('workflowStatusBadge');
+      const lastStatus = transitions.length ? transitions[transitions.length - 1].status : 'COMPLETED';
+      wfBadge.textContent = lastStatus === 'FAILED' ? 'CIRCUIT BREAKER HALTED' : 'DELIVERABLE VERIFIED';
+      wfBadge.className = 'badge ' + (lastStatus === 'FAILED' ? 'badge-red' : 'badge-green');
+    }
+
+    function selectTimelineStep(index, element) {
+      document.querySelectorAll('.timeline-item').forEach(el => el.classList.remove('selected'));
+      if (element) element.classList.add('selected');
+      if (currentWorkflowData && currentWorkflowData.transitions[index]) {
+        document.getElementById('transitionJsonViewer').textContent = JSON.stringify(
+          currentWorkflowData.transitions[index],
+          null,
+          2
+        );
+      }
+    }
+
+    function populateSampleToolArgs() {
+      const tool = document.getElementById('rbacTool').value;
+      const box = document.getElementById('rbacKwargs');
+      if (tool === 'chromadb_semantic_search') {
+        box.value = JSON.stringify({ query: "GridFlow cyclic topology Planner Researcher", top_k: 3 }, null, 2);
+      } else if (tool === 'python_ast_validator') {
+        box.value = JSON.stringify({ code_string: "def compute_load(mw: float) -> float:\n    return mw * 1.05\n" }, null, 2);
+      } else if (tool === 'artifact_file_writer') {
+        box.value = JSON.stringify({ filename: "demo_output.py", content: "# Verified GridFlow Artifact\nprint('OK')\n" }, null, 2);
+      } else if (tool === 'web_scraper_extracter') {
+        box.value = JSON.stringify({ url: "https://example.com", max_chars: 1500 }, null, 2);
+      }
+    }
+
+    function loadRbacViolationDemo() {
+      document.getElementById('rbacNode').value = 'Researcher_Node';
+      document.getElementById('rbacTool').value = 'artifact_file_writer';
+      document.getElementById('rbacKwargs').value = JSON.stringify({
+        filename: "unauthorized.py",
+        content: "print('Should be blocked by RBAC!')"
+      }, null, 2);
+      runRbacTest();
+    }
+
+    function loadAstSecurityDemo() {
+      document.getElementById('rbacNode').value = 'Reviewer_Node';
+      document.getElementById('rbacTool').value = 'python_ast_validator';
+      document.getElementById('rbacKwargs').value = JSON.stringify({
+        code_string: "import subprocess\nimport shutil\nresult = eval('2 + 2')\n"
+      }, null, 2);
+      runRbacTest();
+    }
+
+    function loadPathTraversalDemo() {
+      document.getElementById('rbacNode').value = 'Executor_Node';
+      document.getElementById('rbacTool').value = 'artifact_file_writer';
+      document.getElementById('rbacKwargs').value = JSON.stringify({
+        filename: "../../escape_sandbox.py",
+        content: "print('Blocked path traversal')"
+      }, null, 2);
+      runRbacTest();
+    }
+
+    async function runRbacTest() {
+      const nodeName = document.getElementById('rbacNode').value;
+      const toolName = document.getElementById('rbacTool').value;
+      let kwargs = {};
+      try {
+        kwargs = JSON.parse(document.getElementById('rbacKwargs').value);
+      } catch (e) {
+        alert('Invalid JSON in kwargs');
+        return;
+      }
+
+      const res = await fetch('/api/tool?endpoint=tool', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ node_name: nodeName, tool_name: toolName, kwargs, enforce_rbac: true })
+      });
+      const data = await res.json();
+      const status = (data.result && data.result.status) || 'DONE';
+      const badge = document.getElementById('toolResultBadge');
+      badge.textContent = status;
+      badge.className = 'badge ' + (status.includes('ERROR') || status.includes('VIOLATION') || status.includes('FLAGGED') ? 'badge-red' : 'badge-green');
+      document.getElementById('toolResultViewer').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function refreshSystemStatus() {
+      try {
+        const res = await fetch('/api/status?endpoint=status');
+        const data = await res.json();
+        document.getElementById('pill-kb').textContent = `ChromaDB: ${data.kb_count} docs (cosine ≥ 0.72)`;
+        document.getElementById('pill-sessions').textContent = `SQLite Checkpoints: ${(data.sessions || []).length} threads`;
+        document.getElementById('kbDocsViewer').textContent = JSON.stringify(data.kb_documents, null, 2);
+
+        const tbody = document.getElementById('sessionsTableBody');
+        tbody.innerHTML = '';
+        (data.sessions || []).forEach(s => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><code>${s.thread_id}</code></td>
+            <td><span class="badge badge-cyan">${s.steps} snapshots</span></td>
+            <td>${s.last_updated}</td>
+            <td><button class="preset-btn" style="padding:4px 10px;" onclick="loadSessionHistory('${s.thread_id}')">Inspect Checkpoints</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadSessionHistory(threadId) {
+      const res = await fetch('/api/session/' + encodeURIComponent(threadId) + '?endpoint=session&thread_id=' + encodeURIComponent(threadId));
+      const data = await res.json();
+      document.getElementById('sessionHistoryViewer').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function upsertKnowledgeDoc() {
+      const payload = {
+        doc_id: document.getElementById('newDocId').value,
+        source_type: document.getElementById('newDocType').value,
+        title: document.getElementById('newDocTitle').value,
+        content: document.getElementById('newDocContent').value
+      };
+      const res = await fetch('/api/kb/upsert?endpoint=kb_upsert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      await res.json();
+      await refreshSystemStatus();
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await refreshSystemStatus();
+      await executeWorkflow();
+    });
+  </script>
+</body>
+</html>
