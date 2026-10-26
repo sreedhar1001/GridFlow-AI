@@ -1,7 +1,7 @@
 """
 GridFlow AI Verified Production Artifact: Distributed Token Bucket Rate Limiter
 Prompt: Build a thread-safe Token Bucket Rate Limiter API service in Python
-Verified Citations: DOC-CODE-001, DOC-CUSTOM-01
+Verified Citations: DOC-CODE-001, MEM-session-, DOC-CUSTOM-01
 """
 
 import time

@@ -456,6 +456,7 @@
       </div>
     </div>
     <div class="status-pills">
+      <button class="btn-primary" style="padding:6px 14px; font-size:12px;" id="autoTourBtn" onclick="runAutoDemoTour()">🎬 Auto-Play 60s Video Demo Tour</button>
       <div class="pill"><span class="dot"></span> Core Grid: ONLINE</div>
       <div class="pill" id="pill-kb">ChromaDB: 6 docs (cosine ≥ 0.72)</div>
       <div class="pill" id="pill-sessions">SQLite Checkpoints: 1 thread</div>
@@ -1023,6 +1024,46 @@
       });
       await res.json();
       await refreshSystemStatus();
+    }
+
+    async function runAutoDemoTour() {
+      const tourBtn = document.getElementById('autoTourBtn');
+      tourBtn.disabled = true;
+      tourBtn.textContent = '🎥 Recording Tour: Scenario A (Standard)...';
+      const tabBtns = document.querySelectorAll('.tab-btn');
+
+      // 1. Scenario A
+      switchTab('orchestrator', tabBtns[0]);
+      selectPreset('standard');
+      await new Promise(r => setTimeout(r, 2600));
+
+      // 2. Scenario B (Self-Heal)
+      tourBtn.textContent = '🎥 Recording Tour: Scenario B (Self-Healing Retry)...';
+      selectPreset('self_heal');
+      await new Promise(r => setTimeout(r, 3200));
+
+      // 3. Scenario C (Circuit Breaker)
+      tourBtn.textContent = '🎥 Recording Tour: Scenario C (Circuit Breaker 3x)...';
+      selectPreset('circuit_breaker');
+      await new Promise(r => setTimeout(r, 3800));
+
+      // 4. Tab 2: RBAC & AST Security Bench
+      tourBtn.textContent = '🎥 Recording Tour: RBAC & AST Security Gates...';
+      switchTab('skills', tabBtns[1]);
+      loadRbacViolationDemo();
+      await new Promise(r => setTimeout(r, 2200));
+      loadAstSecurityDemo();
+      await new Promise(r => setTimeout(r, 2200));
+
+      // 5. Tab 3: 3-Tier Memory & SQLite Checkpoints
+      tourBtn.textContent = '🎥 Recording Tour: 3-Tier Memory & ChromaDB...';
+      switchTab('memory', tabBtns[2]);
+      await refreshSystemStatus();
+      await new Promise(r => setTimeout(r, 2200));
+
+      switchTab('orchestrator', tabBtns[0]);
+      tourBtn.disabled = false;
+      tourBtn.textContent = '🎬 Auto-Play 60s Video Demo Tour';
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
